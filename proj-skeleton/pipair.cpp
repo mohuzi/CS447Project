@@ -119,8 +119,13 @@ int main(int argc, char* argv[]) {
 			cerr << "Your Command line paramaters are wrong!" << endl;
 	}; // switch
 	
+
+ cout <<"\n\n\n\n\n\n\n\n\n\n" << endl;
+  
 	for(int i =0; i < callgraph.size(); i++) {
-		cout << callgraph[i] << endl;
+		
+
+    cout << callgraph[i] << endl;
 	}
 
 }
