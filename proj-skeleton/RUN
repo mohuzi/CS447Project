@@ -1,8 +1,10 @@
 #!/bin/bash
 
-cd ~/Desktop/cs447/project/proj-skeleton
+cd ~/proj-skeleton
 ./clean.sh
 make pipair
 cd test1
+echo -e "\033[38;5;148m-----------MAY CONTAIN ERROR MESSAGE-----------------------"
 make
+echo -e "------------------------------------------------\033[39m"
 cat test1_10_80.out

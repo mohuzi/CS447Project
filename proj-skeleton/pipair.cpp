@@ -16,6 +16,8 @@ enum
 };
 
 
+ 
+
 
 
 void parser(std::vector<string> &callgraph){
@@ -65,6 +67,12 @@ int callgraph_gen( char* argv, vector<string> &callgraph ) {
       return 1;
     }
 
+    //redirect the stdout to a dummy pipe
+    int dummyPipe[2];
+    pipe(dummyPipe);
+    dup2(dummyPipe[1],1);
+     
+
     /* print something to stderr 
     fprintf(stderr, "This is child, just before spawning opt with %s.\n", bc_file);
 	*/
@@ -73,6 +81,10 @@ int callgraph_gen( char* argv, vector<string> &callgraph ) {
       cerr << "execl opt" << endl;
       return 1;
     }
+     
+    close(dummyPipe[1]);
+    close(dummyPipe[0]);
+
 
     /* unreachable code */
     return 0;
@@ -120,12 +132,12 @@ int main(int argc, char* argv[]) {
 	}; // switch
 	
 
- cout <<"\n\n\n\n\n\n\n\n\n\n" << endl;
+  //cout <<"\n\n\n\n\n\n\n\n\n\n" << endl;
   
-	for(int i =0; i < callgraph.size(); i++) {
-		
+	for(int i =0; i < callgraph.size(); i++)
+	{		
 
-    cout << callgraph[i] << endl;
+     cout << callgraph[i] << endl;
 	}
 
 }
