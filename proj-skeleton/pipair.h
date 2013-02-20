@@ -16,3 +16,7 @@ enum
 };
 */
 void parser(); // Parses th
+void callgraph_gen( char* argv );
+void statistic();
+
+#endif //_PIPAIR_
