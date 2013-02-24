@@ -5,6 +5,8 @@
 #include <vector>
 #include <map>
 #include <vector>
+#include <stdlib.h>
+#include <algorithm> 
 using namespace std;
 
 unsigned int T_SUPPORT = 3; // default support
