@@ -102,46 +102,45 @@ void parser(std::list<string> &tokens, std::map<int, string> &IDtoFunc, std::map
 
 //Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
   void analyze(map<int, string> &IDtoFunc, map<string, int> &FunctoID,map<int, vector<int> > &FuncCalls,int &maxID,vector<map<int,FunctionPair> > &Pairs){
-
     cout << "Beginning Analysis" << flush << endl;
     vector<int> support = vector<int>(maxID,0);
-      int a = 0, b = 0;
-      for (map<int, vector<int> >::iterator i=FuncCalls.begin(); i != FuncCalls.end(); ++i){
-	vector<int> &v = i->second;
-	sort( v.begin(), v.end() );
-	v.erase( unique( v.begin(), v.end() ), v.end() );
-	for (vector<int>::iterator j=i->second.begin(); j != i->second.end(); ++j){
-
-	  for (vector<int>::iterator k=i->second.begin(); k != i->second.end(); ++k){
-
-	    a = *j;
-	    b = *k;
-	    if (a != b) {
-	      support[b]++;
-
-      	      Pairs[a][b].support++;
-	      Pairs[a][b].a = a;
-	      Pairs[a][b].b = b;
-	    }
-
-	  }
-
+	int a = 0, b = 0;
+	//Calculate support for each function and function pair
+	for (map<int, vector<int> >::iterator i=FuncCalls.begin(); i != FuncCalls.end(); ++i){
+		vector<int> &v = i->second;
+		//Remove duplicate function calls (maybe should do in the parser?)
+		sort( v.begin(), v.end() );
+		v.erase( unique( v.begin(), v.end() ), v.end() );
+		//Go through all function pairs
+		for (vector<int>::iterator j=v.begin(); j != v.end(); ++j){
+			a = *j;
+			support[a]++;
+			for (vector<int>::iterator k=v.begin(); k != v.end(); ++k){				
+				b = *k;
+				if (a != b) {					
+					Pairs[a][b].support++;
+					Pairs[a][b].a = a;
+					Pairs[a][b].b = b;
+				}
+			}
+		}
 	}
-
-      }
-       for (vector<map<int,FunctionPair> >::iterator i=Pairs.begin(); i != Pairs.end(); ++i){
-	for (map<int,FunctionPair>::iterator j=i->begin(); j != i->end(); ++j){
-	  FunctionPair &p = j->second;
-	  cout << p.a << " " << p.b << " " << p.support << " " << (p.support) * 100 / support[p.a] << endl;
-	  if( p.support < T_SUPPORT || (p.support) * 100 / support[p.a] < T_CONFIDENCE){
-	    i->erase(j);
-	  } else {
-	    j->second.confidence = (p.support) * 100 / support[p.a];
-	  }
+	//Calculate confidence for each function pair, and throw out any pairs that don't meet the threasholds
+	//Loop through all function pairs
+    for (vector<map<int,FunctionPair> >::iterator i=Pairs.begin(); i != Pairs.end(); ++i){
+		for (map<int,FunctionPair>::iterator j=i->begin(); j != i->end(); ++j){
+			FunctionPair &p = j->second;
+			//cout << p.a << " " << p.b << " " << p.support << " " << (p.support) * 100 / support[p.a] << endl;
+			if( p.support < T_SUPPORT || (p.support) * 10000 / support[p.a] < T_CONFIDENCE){
+				//Doesn't meet support or confidence threasholds
+				i->erase(j);
+			} else {
+				//Does meet thresholds, keep and record confidence
+				p.confidence = (p.support) * 10000 / support[p.a];
+			}
+		}
 	}
-       }
-	      cout << "Ending Analysis" << flush << endl;
-
+	cout << "Ending Analysis" << flush << endl;
 }
 
 void find_bugs() {
@@ -267,8 +266,6 @@ int main(int argc, char* argv[]) {
   int maxID;
 
   parser(tokens,IDtoFunc,FunctoID,FuncCalls,maxID);
-  vector<map<int,FunctionPair> > Pairs(maxID +1);
-  analyze(IDtoFunc,FunctoID,FuncCalls,maxID,Pairs);
  
   // To see what we have in those data structure. 
   
@@ -286,8 +283,17 @@ int main(int argc, char* argv[]) {
       }
   
 
-  // Your Code here:
-
+	// Your Code here:
+	vector<map<int,FunctionPair> > Pairs(maxID +1);
+	analyze(IDtoFunc,FunctoID,FuncCalls,maxID,Pairs);  
+	cout << "Learned Constraints :" << flush << endl;	
+	//Loop through all function pairs
+    for (vector<map<int,FunctionPair> >::iterator i=Pairs.begin(); i != Pairs.end(); ++i){
+		for (map<int,FunctionPair>::iterator j=i->begin(); j != i->end(); ++j){
+			FunctionPair &p = j->second;
+			cout << "pair: (" << IDtoFunc[p.a] << "," << IDtoFunc[p.b] << "), support:" << p.support << ", condfidence:" << p.confidence << endl;
+		}
+	}
 
   //To see the original Bitcode. To use this, u need to comment out line 175 to line 179 (mark 1 to mark 1 end)
   for(int i =0; i < callgraph.size(); i++)
