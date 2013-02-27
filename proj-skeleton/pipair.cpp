@@ -6,37 +6,25 @@
 #include <map>
 #include <vector>
 #include <stdlib.h>
-#include <algorithm> 
+#include <algorithm>
+#include "pipair.h"
 using namespace std;
 
+// GLOBAL DEFINITIONS
 unsigned int T_SUPPORT = 3; // default support
 unsigned int T_CONFIDENCE = 65; // default confidence
 
-enum 
-{
-  PIPE_READ = 0,
-  PIPE_WRITE,
-};
 
-class FunctionPair{
-public:
-  int a;
-  int b;
-  int support;
-  int confidence;
-  FunctionPair():a(0),b(0),support(0),confidence(-1) {
-  }
-};
-
- 
-string getFuncfromToken(string token){
+string getFuncfromToken(string token) {
   int i;
-  for(i = 1; token[i] != '\'' && i != token.length() -1 ; i++ ){}
-  return token.substr(1,i-1);
+  for (i = 1; token[i] != '\'' && i != token.length() -1; i++) {
+  }
+  return token.substr(1, i - 1);
 }
 
 
-void parser(std::list<string> &tokens, std::map<int, string> &IDtoFunc, std::map<string, int> &FunctoID,std::map<int, std::vector<int> > &FuncCalls, int &maxID){
+void parser(std::list<string> &tokens, std::map<int, string> &IDtoFunc, std::map<string, int> &FunctoID,std::map<int, std::vector<int> > &FuncCalls, int &maxID) {
+
     int ID = 0;
     
 
@@ -100,10 +88,10 @@ void parser(std::list<string> &tokens, std::map<int, string> &IDtoFunc, std::map
 }
 
 
-//Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
-  void analyze(map<int, string> &IDtoFunc, map<string, int> &FunctoID,map<int, vector<int> > &FuncCalls,int &maxID,vector<map<int,FunctionPair> > &Pairs){
-    cout << "Beginning Analysis" << flush << endl;
-    vector<int> support = vector<int>(maxID,0);
+// Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
+void analyze(map<int, string> &IDtoFunc, map<string, int> &FunctoID,map<int, vector<int> > &FuncCalls,int &maxID,vector<map<int,FunctionPair> > &Pairs) {
+  cout << "Beginning Analysis" << flush << endl;
+  vector<int> support = vector<int>(maxID,0);
 	int a = 0, b = 0;
 	//Calculate support for each function and function pair
 	for (map<int, vector<int> >::iterator i=FuncCalls.begin(); i != FuncCalls.end(); ++i){
