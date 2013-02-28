@@ -13,7 +13,8 @@ using namespace std;
 // GLOBAL DEFINITIONS
 unsigned int T_SUPPORT = 3; // default support
 unsigned int T_CONFIDENCE = 65; // default confidence
-
+vector<string> callgraph;	// keep track of the call graph
+list<string> tokens;	// tokenize the callgraph
 
 string getFuncfromToken(string token) {
   int i;
@@ -23,13 +24,13 @@ string getFuncfromToken(string token) {
 }
 
 
-void parser(std::list<string> &tokens, std::map<int, string> &IDtoFunc, std::map<string, int> &FunctoID,std::map<int, std::vector<int> > &FuncCalls, int &maxID) {
+void parser(list<string> &tokens, map<int, string> &IDtoFunc, map<string, int> &FunctoID,map<int, vector<int> > &FuncCalls, int &maxID) {
 
     int ID = 0;
     
 
     bool startFlag = false;
-    for (std::list<string>::iterator it=tokens.begin(); it != tokens.end(); ++it){
+    for (list<string>::iterator it=tokens.begin(); it != tokens.end(); ++it){
          if (*it == "function:"){
               ++it;
               startFlag = true;
@@ -59,7 +60,7 @@ void parser(std::list<string> &tokens, std::map<int, string> &IDtoFunc, std::map
     }
     
     string TopLevelFunc = "";
-    for (std::list<string>::iterator it=tokens.begin(); it != tokens.end(); ++it){
+    for (list<string>::iterator it=tokens.begin(); it != tokens.end(); ++it){
         if (*it == "function:"){
               ++it;
               string func = getFuncfromToken(*it);
@@ -134,141 +135,118 @@ void analyze(map<int, string> &IDtoFunc, map<string, int> &FunctoID,map<int, vec
 void find_bugs() {
 }
 
-int callgraph_gen( char* argv, vector<string> &callgraph, std::list<string> &tokens ) {
+void callgraph_gen( char* argv ) {
 
 	string line;
 	/* pipe to connect opt's stderr and our stdin */
-  int pipe_callgraph[2];
+	int pipe_callgraph[2];
 
-  /* pid of opt */
-  int opt_pid;
+	/* pid of opt */
+	int opt_pid;
 
-  /* arguments */
-  char *bc_file;
-  int support;
-  double confidence;
+	/* arguments */
+	char *bc_file;
+	int support;
+	double confidence;
 
-  /* check arguments */
-  /* !!!parse arguments yourself!!! */
-  bc_file = argv;
+	/* check arguments */
+	/* !!!parse arguments yourself!!! */
+	bc_file = argv;
 
-  /* create pipe and check if pipe succeeded */
-  if (pipe(pipe_callgraph) < 0) {
-    cerr << "pipe" << endl;
-    return 1;
-  }
+	/* create pipe and check if pipe succeeded */
+	if (pipe(pipe_callgraph) < 0) {
+		cerr << "pipe" << endl;	
+	}
 
-  /* create child process */
-  opt_pid = fork();
-  if (!opt_pid) { /* child process, to spawn opt */
+	/* create child process */
+	opt_pid = fork();
+	if (!opt_pid) { /* child process, to spawn opt */
 
-    /* close the read end, since opt only write */
-    close(pipe_callgraph[PIPE_READ]);  
+		/* close the read end, since opt only write */
+		close(pipe_callgraph[PIPE_READ]);  
 
-    /* bind pipe to stderr, and check */
-    if (dup2(pipe_callgraph[PIPE_WRITE], STDERR_FILENO) < 0) {
-      cerr << "dup2 pipe_callgraph" << endl;
-      return 1;
-    }
+		/* bind pipe to stderr, and check */
+		if (dup2(pipe_callgraph[PIPE_WRITE], STDERR_FILENO) < 0) {
+			cerr << "dup2 pipe_callgraph" << endl;			
+		}
 
-    //redirect the stdout to a dummy pipe
-    int dummyPipe[2];
-    pipe(dummyPipe);
-    dup2(dummyPipe[1],1);
+		//redirect the stdout to a dummy pipe
+		int dummyPipe[2];
+		pipe(dummyPipe);
+		dup2(dummyPipe[1],1);
      
 
-    /* print something to stderr 
-    fprintf(stderr, "This is child, just before spawning opt with %s.\n", bc_file);
-	*/
-    /* spawn opt */
-    if (execl("/usr/local/bin/opt", "opt", "-print-callgraph", bc_file, (char *)NULL) < 0) {
-      cerr << "execl opt" << endl;
-      return 1;
-    }
+		/* print something to stderr 
+		fprintf(stderr, "This is child, just before spawning opt with %s.\n", bc_file);
+		*/
+		/* spawn opt */
+		if (execl("/usr/local/bin/opt", "opt", "-print-callgraph", bc_file, (char *)NULL) < 0) {
+			cerr << "execl opt" << endl;			
+		}
      
-    close(dummyPipe[1]);
-    close(dummyPipe[0]);
+		close(dummyPipe[1]);
+		close(dummyPipe[0]);
+	}// if
 
-
-    /* unreachable code */
-    return 0;
-  }
-
-  /* parent process */
+	/* parent process */
   
 
-  /* close the write end, since we only read */
-  close(pipe_callgraph[PIPE_WRITE]);
+	/* close the write end, since we only read */
+	close(pipe_callgraph[PIPE_WRITE]);
 
-  /* since we don't need stdin, we simply replace stdin with the pipe */
-  if (dup2(pipe_callgraph[PIPE_READ], STDIN_FILENO) < 0) {
-    cerr << "dup2 pipe_callgraph" << endl;
-    return 1;
-  }
-
-  /* we print w/e read from the pipe 
-  char c = '\0';
-  while (scanf("%c", &c) >= 1) {
-    printf("%c", c);
-  }
-	*/
-
-  string token="";
-  //mark 1
-  while(cin >> token ){
-      tokens.push_back(token);
-  }
-  //mark 1 end
-
-	while(getline(cin, line)) {
-		callgraph.push_back(line);
+	/* since we don't need stdin, we simply replace stdin with the pipe */
+	if (dup2(pipe_callgraph[PIPE_READ], STDIN_FILENO) < 0) {
+		cerr << "dup2 pipe_callgraph" << endl;	
 	}
-  /* "That's all folks." */
-  return 0;
-}
+
+	string token="";
+	//mark 1
+	while(cin >> token ){
+		tokens.push_back(token);
+	}
+	//mark 1 end
+
+	//while(getline(cin, line)) {
+		//callgraph.push_back(line);
+	//}
+	
+}// callgraph_gen
 
 
-int main(int argc, char* argv[]) {
-	vector<string> callgraph;
-  list<string> tokens;
-
-	switch( argc ) {
-		case 2:
-			callgraph_gen( argv[1], callgraph , tokens );
-			break;
+int main(int argc, char* argv[]) {	
+	switch( argc ) {		
 		case 4:
 			T_SUPPORT = atoi(argv[2]);
 			T_CONFIDENCE = atoi(argv[3]);
-			callgraph_gen( argv[1], callgraph , tokens);
+			// FALL THROUGH
+		case 2:
+			callgraph_gen( argv[1] );
 			break;
 		default:
 			cerr << "Your Command line paramaters are wrong!" << endl;
-	}; // switch
-	
-
-   
+	}; // switch   
   
-  std::map<int, string> IDtoFunc;
-  std::map<string, int> FunctoID;
-  std::map<int, std::vector<int> > FuncCalls; 
-  int maxID;
+	map<int, string> IDtoFunc;
+	map<string, int> FunctoID;
+	map<int, vector<int> > FuncCalls; 
+	int maxID;
 
-  parser(tokens,IDtoFunc,FunctoID,FuncCalls,maxID);
+	parser(tokens,IDtoFunc,FunctoID,FuncCalls,maxID);
  
-  // To see what we have in those data structure. 
+	// To see what we have in those data structure. 
   
-        cout << "function map :" << endl;
-      for (std::map<int, string>::iterator  it=IDtoFunc.begin(); it!=IDtoFunc.end(); ++it)
-            std::cout << it->first << " => " << it->second << '\n';
+		cout << "function map :" << endl;
+		for (map<int, string>::iterator  it=IDtoFunc.begin(); it!=IDtoFunc.end(); ++it)
+			cout << it->first << " => " << it->second << '\n';
 
-      cout << endl<<"Call functions :" << endl;
-      for (std::map<int, std::vector<int> >::iterator  it=FuncCalls.begin(); it!=FuncCalls.end(); ++it){
-            cout << it->first << " calls:" << endl;
-            for (std::vector<int>::iterator  it2=it->second.begin(); it2!=it->second.end(); ++it2){
-              cout << *it2 <<" ";
-            }
-            cout << endl;
-      }
+		cout << endl<<"Call functions :" << endl;
+		for (map<int, vector<int> >::iterator  it=FuncCalls.begin(); it!=FuncCalls.end(); ++it){
+			cout << it->first << " calls:" << endl;
+			for (vector<int>::iterator  it2=it->second.begin(); it2!=it->second.end(); ++it2){
+				cout << *it2 <<" ";
+			}
+			cout << endl;
+		}
   
 
 	// Your Code here:
@@ -276,18 +254,18 @@ int main(int argc, char* argv[]) {
 	analyze(IDtoFunc,FunctoID,FuncCalls,maxID,Pairs);  
 	cout << "Learned Constraints :" << flush << endl;	
 	//Loop through all function pairs
-    for (vector<map<int,FunctionPair> >::iterator i=Pairs.begin(); i != Pairs.end(); ++i){
+	for (vector<map<int,FunctionPair> >::iterator i=Pairs.begin(); i != Pairs.end(); ++i){
 		for (map<int,FunctionPair>::iterator j=i->begin(); j != i->end(); ++j){
 			FunctionPair &p = j->second;
 			cout << "pair: (" << IDtoFunc[p.a] << "," << IDtoFunc[p.b] << "), support:" << p.support << ", condfidence:" << p.confidence << endl;
 		}
 	}
 
-  //To see the original Bitcode. To use this, u need to comment out line 175 to line 179 (mark 1 to mark 1 end)
-  for(int i =0; i < callgraph.size(); i++)
+	//To see the original Bitcode. To use this, u need to comment out line 175 to line 179 (mark 1 to mark 1 end)
+	for(int i =0; i < callgraph.size(); i++)
 	{		
 
-     cout << callgraph[i] << endl;
+		cout << callgraph[i] << endl;
 	}
 
 }
