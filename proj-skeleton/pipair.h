@@ -25,13 +25,13 @@ class FunctionPair{
 
 // FUNCTION PROTOTYPES ====================================
 
-string getFuncfromToken(string token);
+string getFuncfromToken(const string &token);
 
  // Parses the call graph
-void parser(list<string> &tokens, map<int, string> &IDtoFunc, map<string, int> &FunctoID,map<int, vector<int> > &FuncCalls, int &maxID);
+void parser( );
 
 // Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
-void analyze(map<int, string> &IDtoFunc, map<string, int> &FunctoID,map<int, vector<int> > &FuncCalls,int &maxID,vector<map<int,FunctionPair> > &Pairs);
+void analyze( vector<map<int,FunctionPair> > &Pairs );
 
 void find_bugs();
 
