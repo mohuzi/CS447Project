@@ -14,112 +14,6 @@ map< string, int > FunctoID;
 map< int, vector<int> > FuncCalls;
 int maxID;
 
-string getFuncFromToken( const string &token ) {  
-  return token.substr( 1, token.find_last_of( "\'" ) - 1 );
-}// getFuncFromToken
-
-
-void parser( ) {
-
-    int ID = 0;
-    bool startFlag = false;
-	string func, TopLevelFunc = "";
-
-	for( int i = 0; i < callgraph_tokens.size(); i++ ) {
-		if( callgraph_tokens[ i ] == "function:" ) {
-			startFlag = true;
-			func = getFuncFromToken( callgraph_tokens[ i + 1 ] );
-			if(FunctoID.find( func ) == FunctoID.end() ){			
-				FunctoID[ func ] = ID;
-				IDtoFunc[ ID ] = func;
-				ID++;
-			}// if
-		}// if
-		else if( ( callgraph_tokens[ i] == "function" ) && startFlag ) {
-			func = getFuncFromToken( callgraph_tokens[ i + 1 ] );
-			if(FunctoID.find( func ) == FunctoID.end() ) {
-				FunctoID[ func ] = ID;
-				IDtoFunc[ ID ] = func;
-				ID++;
-			}// if
-		}// else if
-	}// for
-	
-	for ( int i = 0; i < callgraph_tokens.size(); i++ ) {
-		if( callgraph_tokens[ i ] == "function:" ) {
-			TopLevelFunc = getFuncFromToken( callgraph_tokens[ i + 1 ] );			
-		}// if
-		else if( callgraph_tokens[ i ] == "function" && TopLevelFunc != "" ) {
-			func = getFuncFromToken( callgraph_tokens[ i +1 ] );
-            if( FuncCalls.find( FunctoID[ TopLevelFunc ]) != FuncCalls.end()) {
-                if( find( FuncCalls[ FunctoID[ TopLevelFunc ] ].begin(),
-						  FuncCalls[ FunctoID[ TopLevelFunc ] ].end(),
-						  FunctoID[ func ]) == FuncCalls[ FunctoID[ TopLevelFunc ] ].end() ) {
-                       
-                    FuncCalls[ FunctoID[ TopLevelFunc ] ].push_back( FunctoID[ func ] );
-                }//if
-            }// if
-            else {                 
-				FuncCalls[ FunctoID[ TopLevelFunc ] ].push_back( FunctoID[ func ] );
-            }// else
-		}// else if
-	}// for
-	maxID = ID - 1;    
-}// parser
-
-
-// Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
-void analyze( vector< map< int, FunctionPair > > &Pairs ) {
-
-	cout << "Beginning Analysis" << flush << endl; //? what is flush?
-	vector< int > support = vector< int >( maxID, 0 );
-	int a = 0, b = 0;
-
-	//Calculate support for each function and function pair
-	for( map< int, vector< int > >::iterator i = FuncCalls.begin(); i != FuncCalls.end(); ++i ) {
-
-		vector< int > &v = i->second;
-		//Remove duplicate function calls (maybe should do in the parser?)
-		sort( v.begin(), v.end() );
-		v.erase( unique( v.begin(), v.end() ), v.end() );
-
-		//Go through all function pairs
-		for( int j = 0; j < v.size(); j++ ) {
-			a = v[ j ];
-			support[ a ]++;
-			for( int k = 0; k < v.size(); k++ ){				
-				b = v[ k ];
-				if ( a != b ) {					
-					Pairs[ a ][ b ].support++;
-					Pairs[ a ][ b ].a = a;
-					Pairs[ a ][ b ].b = b;
-				}// if
-			}// for
-		}// for
-	}// for
-
-	//Calculate confidence for each function pair, and throw out any pairs that don't meet the threasholds
-	//Loop through all function pairs
-    for ( int i = 0; i < Pairs.size(); i++ ){
-		for ( map< int, FunctionPair >::iterator j = Pairs[ i ].begin(); j != Pairs[ i ].end(); ++j ) {
-			FunctionPair &p = j->second;
-			//cout << p.a << " " << p.b << " " << p.support << " " << (p.support) * 100 / support[p.a] << endl;
-			if( p.support < T_SUPPORT || (p.support) * 10000 / support[ p.a ] < T_CONFIDENCE){
-				//Doesn't meet support or confidence threasholds
-				Pairs[ i ].erase( j );
-			} //if
-			else {
-				//Does meet thresholds, keep and record confidence
-				p.confidence = ( p.support ) * 10000 / support[ p.a ];
-			}//else
-		}//for
-	}//for
-	cout << "Ending Analysis" << flush << endl;
-}//  analyze
-
-void find_bugs() {
-}
-
 void callgraph_gen( char* argv ) {
 
 	/* pipe to connect opt's stderr and our stdin */
@@ -200,6 +94,116 @@ void callgraph_gen( char* argv ) {
 }// callgraph_gen
 
 
+string getFuncFromToken( const string &token ) {  
+  return token.substr( 1, token.find_last_of( "\'" ) - 1 );
+}// getFuncFromToken
+
+
+void parser( ) {
+
+    int ID = 0;
+    bool startFlag = false;
+	string func, TopLevelFunc = "";
+
+	for( int i = 0; i < callgraph_tokens.size(); i++ ) {
+		if( callgraph_tokens[ i ] == "function:" ) {
+			startFlag = true;
+			func = getFuncFromToken( callgraph_tokens[ i + 1 ] );
+			if(FunctoID.find( func ) == FunctoID.end() ){			
+				FunctoID[ func ] = ID;
+				IDtoFunc[ ID ] = func;
+				ID++;
+			}// if
+		}// if
+		else if( ( callgraph_tokens[ i] == "function" ) && startFlag ) {
+			func = getFuncFromToken( callgraph_tokens[ i + 1 ] );
+			if(FunctoID.find( func ) == FunctoID.end() ) {
+				FunctoID[ func ] = ID;
+				IDtoFunc[ ID ] = func;
+				ID++;
+			}// if
+		}// else if
+	}// for
+	
+	for ( int i = 0; i < callgraph_tokens.size(); i++ ) {
+		if( callgraph_tokens[ i ] == "function:" ) {
+			TopLevelFunc = getFuncFromToken( callgraph_tokens[ i + 1 ] );			
+		}// if
+		else if( callgraph_tokens[ i ] == "function" && TopLevelFunc != "" ) {
+			func = getFuncFromToken( callgraph_tokens[ i +1 ] );
+            if( FuncCalls.find( FunctoID[ TopLevelFunc ]) != FuncCalls.end()) {
+                if( find( FuncCalls[ FunctoID[ TopLevelFunc ] ].begin(),
+						  FuncCalls[ FunctoID[ TopLevelFunc ] ].end(),
+						  FunctoID[ func ]) == FuncCalls[ FunctoID[ TopLevelFunc ] ].end() ) {
+                       
+                    FuncCalls[ FunctoID[ TopLevelFunc ] ].push_back( FunctoID[ func ] );
+                }//if
+            }// if
+            else {                 
+				FuncCalls[ FunctoID[ TopLevelFunc ] ].push_back( FunctoID[ func ] );
+            }// else
+		}// else if
+	}// for
+	maxID = ID - 1;    
+}// parser
+
+
+// Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
+void analyze( vector< map< int, FunctionPair > > &Pairs ) {
+
+	cout << "Beginning Analysis" << flush << endl; 
+	vector< int > support = vector< int >( maxID, 0 );
+	int a = 0, b = 0;
+
+	//Calculate support for each function and function pair
+	for( map< int, vector< int > >::iterator i = FuncCalls.begin(); i != FuncCalls.end(); ++i ) {
+
+		vector< int > &v = i->second;
+		//Remove duplicate function calls (maybe should do in the parser?)
+		sort( v.begin(), v.end() );
+		v.erase( unique( v.begin(), v.end() ), v.end() );
+
+		//Go through all function pairs
+		for( int j = 0; j < v.size(); j++ ) {
+			a = v[ j ];
+			support[ a ]++;
+			for( int k = 0; k < v.size(); k++ ){				
+				b = v[ k ];
+				if ( a != b ) {					
+					Pairs[ a ][ b ].support++;
+					Pairs[ a ][ b ].a = a;
+					Pairs[ a ][ b ].b = b;
+				}// if
+			}// for
+		}// for
+	}// for
+
+	//Calculate confidence for each function pair, and throw out any pairs that don't meet the threasholds
+	//Loop through all function pairs
+    for ( int i = 0; i < Pairs.size(); i++ ){
+		for ( map< int, FunctionPair >::iterator j = Pairs[ i ].begin(); j != Pairs[ i ].end(); ++j ) {
+			FunctionPair &p = j->second;
+			cout << p.a << " " << p.b << " " << p.support << " " << (p.support * 100 )/ support[p.a] << endl;
+			if( p.support < T_SUPPORT || ( ( p.support * 10000 ) / support[ p.a ] ) < T_CONFIDENCE){
+				//Doesn't meet support or confidence threasholds
+				Pairs[ i ].erase( j );
+				//cout << "i val: " << i << endl;
+			} //if
+			else {
+				//Does meet thresholds, keep and record confidence
+				p.confidence = ( p.support * 10000 ) / support[ p.a ];
+			}//else
+		}//for
+	}//for
+	cout << "Ending Analysis" << flush << endl;
+}//  analyze
+
+void find_bugs() {
+}
+
+
+
+
 int main(int argc, char* argv[]) {	
 	switch( argc ) {		
 		case 4:
@@ -223,7 +227,7 @@ int main(int argc, char* argv[]) {
 
 	cout << endl<<"Call functions :" << endl;
 	for ( map< int, vector < int > >::iterator  it = FuncCalls.begin(); it != FuncCalls.end(); ++it ){
-		cout << it->first << " calls:" << endl;
+		cout << it->first << " calls: ";
 		for ( int it2 = 0; it2 < it->second.size(); it2++ ){
 			cout << it->second[ it2 ] <<" ";
 		}
