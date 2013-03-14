@@ -35,10 +35,6 @@ void analyze( vector<map<int,FunctionPair> > &Pairs );
 
 void find_bugs();
 
-void callgraph_gen( char* argv ); // Generates the callgraph from bitcode
-//int callgraph_gen( char* argv, vector<string> &callgraph, std::list<string> &tokens);
-
-void statistics(); // Keeps track of the statistics
-
 #endif //_PIPAIR_
+
 

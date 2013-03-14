@@ -14,91 +14,40 @@ map< string, int > FunctoID;
 map< int, vector<int> > FuncCalls;
 int maxID;
 
-void callgraph_gen( char* argv ) {
-
-	/* pipe to connect opt's stderr and our stdin */
-	int pipe_callgraph[ 2 ];
-
-	/* pid of opt */
-	int opt_pid;
-
-	/* arguments */
-	char *bc_file;
-	int support;
-	double confidence;
-
-	/* check arguments */
-	/* !!!parse arguments yourself!!! */
-	bc_file = argv;
-
-	/* create pipe and check if pipe succeeded */
-	if ( pipe( pipe_callgraph ) < 0 ) {
-		cerr << "pipe" << endl;	
-	}//if
-
-	/* create child process */
-	opt_pid = fork();
-	if ( !opt_pid ) { /* child process, to spawn opt */
-
-		/* close the read end, since opt only write */
-		close( pipe_callgraph[ PIPE_READ ] );  
-
-		/* bind pipe to stderr, and check */
-		if ( dup2( pipe_callgraph[ PIPE_WRITE ], STDERR_FILENO ) < 0) {
-			cerr << "dup2 pipe_callgraph" << endl;			
-		}//if
-
-		//redirect the stdout to a dummy pipe
-		int dummyPipe[ 2 ];
-		pipe( dummyPipe );
-		dup2( dummyPipe[ 1 ], 1);
-     
-
-		/* print something to stderr 
-		fprintf(stderr, "This is child, just before spawning opt with %s.\n", bc_file);
-		*/
-		/* spawn opt */
-		if ( execl( "/usr/local/bin/opt", "opt", "-print-callgraph", bc_file, (char *)NULL ) < 0 ) {
-			cerr << "execl opt" << endl;			
-		}
-     
-		close( dummyPipe[ 1 ] );
-		close( dummyPipe[ 0 ] );
-	}// if
-
-	/* parent process */
-  
-
-	/* close the write end, since we only read */
-	close( pipe_callgraph[ PIPE_WRITE ] );
-
-	/* since we don't need stdin, we simply replace stdin with the pipe */
-	if ( dup2( pipe_callgraph[ PIPE_READ ], STDIN_FILENO ) < 0 ) {
-		cerr << "dup2 pipe_callgraph" << endl;	
-	}//if
-
-	string line;
-	string token="";
-	//mark 1
-	while( cin >> token ) {
-		callgraph_tokens.push_back( token );
-		//tokens.push_back( token );
-	}// while
-
-	//mark 1 end
-
-	//while(getline(cin, line)) {
-		//callgraph.push_back(line);
-	//}
-	
-}// callgraph_gen
-
-
 string getFuncFromToken( const string &token ) {  
   return token.substr( 1, token.find_last_of( "\'" ) - 1 );
 }// getFuncFromToken
 
 
+/* ignore for now
+void parser( ) {
+	
+	
+	cout << "I AM IN THE PARSER" << flush << callgraph_tokens[ 0 ] << endl;
+	return;
+	int ID = 0;
+	int i;
+	string func, TopLevelFunc = "";
+	
+	for( i = 1; i < callgraph_tokens.size(); i++ ) {
+		
+		if( callgraph_tokens[ i ] == "" ) {
+			// no more functions are left so we stop
+			break;
+		}
+		
+		func = getFuncFromToken( callgraph_tokens[ i ] );
+		FunctoID[ func ] = ID;
+		IDtoFunc[ ID ] = func;
+		ID++;
+		
+	}// for
+	
+
+}// parser
+*/
+
+//*
 void parser( ) {
 
     int ID = 0;
@@ -146,6 +95,7 @@ void parser( ) {
 	}// for
 	maxID = ID - 1;    
 }// parser
+//*/
 
 
 // Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
@@ -160,8 +110,8 @@ void analyze( vector< map< int, FunctionPair > > &Pairs ) {
 
 		vector< int > &v = i->second;
 		//Remove duplicate function calls (maybe should do in the parser?)
-		sort( v.begin(), v.end() );
-		v.erase( unique( v.begin(), v.end() ), v.end() );
+		//sort( v.begin(), v.end() );
+		//v.erase( unique( v.begin(), v.end() ), v.end() );
 
 		//Go through all function pairs
 		for( int j = 0; j < v.size(); j++ ) {
@@ -184,14 +134,14 @@ void analyze( vector< map< int, FunctionPair > > &Pairs ) {
 		for ( map< int, FunctionPair >::iterator j = Pairs[ i ].begin(); j != Pairs[ i ].end(); ++j ) {
 			FunctionPair &p = j->second;
 			cout << p.a << " " << p.b << " " << p.support << " " << (p.support * 100 )/ support[p.a] << endl;
-			if( p.support < T_SUPPORT || ( ( p.support * 10000 ) / support[ p.a ] ) < T_CONFIDENCE){
+			if( p.support < T_SUPPORT || ( ( p.support * 100 ) / support[ p.a ] ) < T_CONFIDENCE){
 				//Doesn't meet support or confidence threasholds
 				Pairs[ i ].erase( j );
 				//cout << "i val: " << i << endl;
 			} //if
 			else {
 				//Does meet thresholds, keep and record confidence
-				p.confidence = ( p.support * 10000 ) / support[ p.a ];
+				p.confidence = ( p.support * 100 ) / support[ p.a ];
 			}//else
 		}//for
 	}//for
@@ -205,20 +155,28 @@ void find_bugs() {
 
 
 int main(int argc, char* argv[]) {	
+
+	string line;
+	string token="";
+	//mark 1
+
 	switch( argc ) {		
-		case 4:
-			T_SUPPORT = atoi( argv[ 2 ] );
-			T_CONFIDENCE = atoi( argv[ 3 ] );
+		case 3:
+			T_SUPPORT = atoi( argv[ 1 ] );
+			T_CONFIDENCE = atoi( argv[ 2 ] );
 			// FALL THROUGH
-		case 2:
-			callgraph_gen( argv[ 1 ] );
+		case 1:
+			while( cin >> token ) {
+				callgraph_tokens.push_back( token );
+				//tokens.push_back( token );
+			}// while
 			break;
 		default:
 			cerr << "Your Command line paramaters are wrong!" << endl;
 	}; // switch   
-  
+	
 	parser( );
- 
+ 	
 	// To see what we have in those data structure. 
   
 	cout << "function map :" << endl;
@@ -233,7 +191,7 @@ int main(int argc, char* argv[]) {
 		}
 		cout << endl;
 	}  	
-
+	
 	// Your Code here:
 	vector< map< int, FunctionPair > > Pairs( maxID + 1 );
 	analyze( Pairs );  
@@ -242,7 +200,7 @@ int main(int argc, char* argv[]) {
 	for( int i = 0; i < Pairs.size(); i++ ){
 		for( map< int, FunctionPair >::iterator j = Pairs[ i ].begin(); j != Pairs[ i ].end(); ++j ) {
 			FunctionPair &p = j->second;
-			cout << "pair: (" << IDtoFunc[ p.a ] << "," << IDtoFunc[ p.b ] << "), support:" << p.support << ", condfidence:" << p.confidence << endl;
+			cout << "bug: " << IDtoFunc[ p.a ] << " in " << IDtoFunc[ i ] << ", pair: (" << IDtoFunc[ p.a ] << " " << IDtoFunc[ p.b ] << "), support: " << p.support << ", condfidence: " << p.confidence << ".00%" <<endl;
 		}
 	}
 
