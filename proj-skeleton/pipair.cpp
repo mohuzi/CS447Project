@@ -6,27 +6,26 @@
 // GLOBAL DEFINITIONS
 unsigned int T_SUPPORT = 3; // default support
 unsigned int T_CONFIDENCE = 65; // default confidence
-vector< string > callgraph;	// keep track of the call graph
 vector< string > callgraph_tokens;	// tokenize the callgraph
-//list< string > tokens;
 map< int, string > IDtoFunc;
 map< string, int > FunctoID;
 map< int, vector<int> > FuncCalls;
 int maxID;
 
-string getFuncFromToken( const string &token ) {  
-  return token.substr( 1, token.find_last_of( "\'" ) - 1 );
+string getFuncFromToken( const string &token ) { 
+	unsigned first, last;
+	first = token.find_first_of( "\'" ) + 1;
+	last = token.find_last_of( "\'" ) ;
+	
+	return token.substr( first, last - first );
 }// getFuncFromToken
 
-
-/* ignore for now
+//* 
 void parser( ) {
 	
-	
-	cout << "I AM IN THE PARSER" << flush << callgraph_tokens[ 0 ] << endl;
-	return;
-	int ID = 0;
+	int ID = -1;
 	int i;
+	unsigned foundTop;
 	string func, TopLevelFunc = "";
 	
 	for( i = 1; i < callgraph_tokens.size(); i++ ) {
@@ -35,51 +34,27 @@ void parser( ) {
 			// no more functions are left so we stop
 			break;
 		}
-		
+		ID++;
 		func = getFuncFromToken( callgraph_tokens[ i ] );
 		FunctoID[ func ] = ID;
 		IDtoFunc[ ID ] = func;
-		ID++;
 		
 	}// for
+	maxID = ID;
 	
+	for( ; i < callgraph_tokens.size(); i++ ) {
+		
+		if( callgraph_tokens[ i ] == "" ) {
+			continue;
+		}
+		
+		if( callgraph_tokens[ i ].find( "function:" ) != string::npos ) {
+			TopLevelFunc = getFuncFromToken( callgraph_tokens[ i ] );
+		}//if
+		else if(callgraph_tokens[ i ].find( "function" ) != string::npos ) {	
 
-}// parser
-*/
+			func = getFuncFromToken( callgraph_tokens[ i ] );
 
-//*
-void parser( ) {
-
-    int ID = 0;
-    bool startFlag = false;
-	string func, TopLevelFunc = "";
-
-	for( int i = 0; i < callgraph_tokens.size(); i++ ) {
-		if( callgraph_tokens[ i ] == "function:" ) {
-			startFlag = true;
-			func = getFuncFromToken( callgraph_tokens[ i + 1 ] );
-			if(FunctoID.find( func ) == FunctoID.end() ){			
-				FunctoID[ func ] = ID;
-				IDtoFunc[ ID ] = func;
-				ID++;
-			}// if
-		}// if
-		else if( ( callgraph_tokens[ i] == "function" ) && startFlag ) {
-			func = getFuncFromToken( callgraph_tokens[ i + 1 ] );
-			if(FunctoID.find( func ) == FunctoID.end() ) {
-				FunctoID[ func ] = ID;
-				IDtoFunc[ ID ] = func;
-				ID++;
-			}// if
-		}// else if
-	}// for
-	
-	for ( int i = 0; i < callgraph_tokens.size(); i++ ) {
-		if( callgraph_tokens[ i ] == "function:" ) {
-			TopLevelFunc = getFuncFromToken( callgraph_tokens[ i + 1 ] );			
-		}// if
-		else if( callgraph_tokens[ i ] == "function" && TopLevelFunc != "" ) {
-			func = getFuncFromToken( callgraph_tokens[ i +1 ] );
             if( FuncCalls.find( FunctoID[ TopLevelFunc ]) != FuncCalls.end()) {
                 if( find( FuncCalls[ FunctoID[ TopLevelFunc ] ].begin(),
 						  FuncCalls[ FunctoID[ TopLevelFunc ] ].end(),
@@ -91,12 +66,11 @@ void parser( ) {
             else {                 
 				FuncCalls[ FunctoID[ TopLevelFunc ] ].push_back( FunctoID[ func ] );
             }// else
-		}// else if
-	}// for
-	maxID = ID - 1;    
+		}//else
+	}//for
+	
 }// parser
 //*/
-
 
 // Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
 void analyze( vector< map< int, FunctionPair > > &Pairs ) {
@@ -166,7 +140,7 @@ int main(int argc, char* argv[]) {
 			T_CONFIDENCE = atoi( argv[ 2 ] );
 			// FALL THROUGH
 		case 1:
-			while( cin >> token ) {
+			while( getline(cin , token ) ) {
 				callgraph_tokens.push_back( token );
 				//tokens.push_back( token );
 			}// while
@@ -205,9 +179,9 @@ int main(int argc, char* argv[]) {
 	}
 
 	//To see the original Bitcode. To use this, u need to comment out line 175 to line 179 (mark 1 to mark 1 end)
-	for( int i =0; i < callgraph.size(); i++ )
+	for( int i =0; i < callgraph_tokens.size(); i++ )
 	{		
-		cout << callgraph[ i ] << endl;
+		//cout << callgraph_tokens[ i ] << endl;
 	}
 
 }
