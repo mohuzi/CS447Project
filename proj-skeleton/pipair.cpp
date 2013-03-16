@@ -1,7 +1,10 @@
 #include <iostream>
 #include <unistd.h> // for system calls
 #include <algorithm>
+#include <iomanip>
 #include "pipair.h"
+
+const bool DEBUG = false;
 
 // GLOBAL DEFINITIONS
 unsigned int T_SUPPORT = 3; // default support
@@ -11,6 +14,7 @@ map< int, string > IDtoFunc;
 map< string, int > FunctoID;
 map< int, vector<int> > FuncCalls;
 int maxID;
+vector< map< int, FunctionPair > > Pairs;
 
 string getFuncFromToken( const string &token ) { 
 	unsigned first, last;
@@ -73,9 +77,8 @@ void parser( ) {
 //*/
 
 // Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
-void analyze( vector< map< int, FunctionPair > > &Pairs ) {
-
-	cout << "Beginning Analysis" << flush << endl; 
+void analyze() {
+	Pairs = vector< map< int, FunctionPair > > ( maxID + 1 );
 	vector< int > support = vector< int >( maxID, 0 );
 	int a = 0, b = 0;
 
@@ -83,10 +86,6 @@ void analyze( vector< map< int, FunctionPair > > &Pairs ) {
 	for( map< int, vector< int > >::iterator i = FuncCalls.begin(); i != FuncCalls.end(); ++i ) {
 
 		vector< int > &v = i->second;
-		//Remove duplicate function calls (maybe should do in the parser?)
-		//sort( v.begin(), v.end() );
-		//v.erase( unique( v.begin(), v.end() ), v.end() );
-
 		//Go through all function pairs
 		for( int j = 0; j < v.size(); j++ ) {
 			a = v[ j ];
@@ -107,22 +106,51 @@ void analyze( vector< map< int, FunctionPair > > &Pairs ) {
     for ( int i = 0; i < Pairs.size(); i++ ){
 		for ( map< int, FunctionPair >::iterator j = Pairs[ i ].begin(); j != Pairs[ i ].end(); ++j ) {
 			FunctionPair &p = j->second;
-			cout << p.a << " " << p.b << " " << p.support << " " << (p.support * 100 )/ support[p.a] << endl;
 			if( p.support < T_SUPPORT || ( ( p.support * 100 ) / support[ p.a ] ) < T_CONFIDENCE){
 				//Doesn't meet support or confidence threasholds
 				Pairs[ i ].erase( j );
-				//cout << "i val: " << i << endl;
 			} //if
 			else {
 				//Does meet thresholds, keep and record confidence
-				p.confidence = ( p.support * 100 ) / support[ p.a ];
+				p.confidence = ( p.support * 10000 ) / support[ p.a ];
 			}//else
 		}//for
 	}//for
-	cout << "Ending Analysis" << flush << endl;
 }//  analyze
 
 void find_bugs() {
+	bool found = false;
+	int a, b;
+	string pairname = "";
+	//Look through all top-level functions
+	for( map< int, vector< int > >::iterator i = FuncCalls.begin(); i != FuncCalls.end(); ++i ) {
+		vector< int > &v = i->second;
+		for( int q = 0; q < v.size(); q++ ) {
+			a = v[ q ];
+			//Look for all the functions that should be used with any invocation of a
+			for ( map< int, FunctionPair >::iterator j = Pairs[ a ].begin(); j != Pairs[ a ].end(); ++j ) {
+				found = false;
+				FunctionPair &p = j->second;
+				//See if we find a use of p.b				
+				for( int k = 0; k < v.size(); k++ ){
+					b = v[ k ];
+					if(p.b == b) {
+						found = true;
+					}
+				}// for
+				if(!found) {
+					//Admiral Ackbar says: "It's a bug!
+					if(IDtoFunc[ p.a ] < IDtoFunc[ p.b ]) {
+						pairname = IDtoFunc[ p.a ] + " " + IDtoFunc[ p.b ];						
+					} else {
+						pairname = IDtoFunc[ p.b ] + " " + IDtoFunc[ p.a ];
+					}
+					cout << "bug: " << IDtoFunc[ p.a ] << " in " << IDtoFunc[ i->first ] << " pair: (" << pairname << ") ";
+					cout << "support: " << p.support << ", confidence: " << p.confidence /100 << "." << setw(2) << setfill('0') << p.confidence % 100 << "%" <<endl;
+				}
+			}// for		
+		}// for
+	}// for
 }
 
 
@@ -151,37 +179,42 @@ int main(int argc, char* argv[]) {
 	
 	parser( );
  	
-	// To see what we have in those data structure. 
-  
-	cout << "function map :" << endl;
-	for ( map< int, string >::iterator  it = IDtoFunc.begin(); it != IDtoFunc.end(); ++it )
-		cout << it->first << " => " << it->second << '\n';
-
-	cout << endl<<"Call functions :" << endl;
-	for ( map< int, vector < int > >::iterator  it = FuncCalls.begin(); it != FuncCalls.end(); ++it ){
-		cout << it->first << " calls: ";
-		for ( int it2 = 0; it2 < it->second.size(); it2++ ){
-			cout << it->second[ it2 ] <<" ";
-		}
-		cout << endl;
-	}  	
 	
-	// Your Code here:
-	vector< map< int, FunctionPair > > Pairs( maxID + 1 );
-	analyze( Pairs );  
-	cout << "Learned Constraints :" << flush << endl;	
-	//Loop through all function pairs
-	for( int i = 0; i < Pairs.size(); i++ ){
-		for( map< int, FunctionPair >::iterator j = Pairs[ i ].begin(); j != Pairs[ i ].end(); ++j ) {
-			FunctionPair &p = j->second;
-			cout << "bug: " << IDtoFunc[ p.a ] << " in " << IDtoFunc[ i ] << ", pair: (" << IDtoFunc[ p.a ] << " " << IDtoFunc[ p.b ] << "), support: " << p.support << ", condfidence: " << p.confidence << ".00%" <<endl;
+	if(DEBUG) {
+		// To see what we have in those data structure. 
+		cout << "function map :" << endl;
+		for ( map< int, string >::iterator  it = IDtoFunc.begin(); it != IDtoFunc.end(); ++it )
+			cout << it->first << " => " << it->second << '\n';
+
+		cout << endl<<"Call functions :" << endl;
+		for ( map< int, vector < int > >::iterator  it = FuncCalls.begin(); it != FuncCalls.end(); ++it ){
+			cout << it->first << " calls: ";
+			for ( int it2 = 0; it2 < it->second.size(); it2++ ){
+				cout << it->second[ it2 ] <<" ";
+			}
+			cout << endl;
+		}  	
+	}
+	
+	if(DEBUG) {
+		//To see the original Bitcode
+		for( int i =0; i < callgraph_tokens.size(); i++ )
+		{		
+			cout << callgraph_tokens[ i ] << endl;
 		}
 	}
-
-	//To see the original Bitcode. To use this, u need to comment out line 175 to line 179 (mark 1 to mark 1 end)
-	for( int i =0; i < callgraph_tokens.size(); i++ )
-	{		
-		//cout << callgraph_tokens[ i ] << endl;
+	
+	analyze();  	
+	if(DEBUG) {
+		cout << "Learned Constraints :" << flush << endl;	
+		//Loop through all function pairs
+		for( int i = 0; i < Pairs.size(); i++ ){
+			for( map< int, FunctionPair >::iterator j = Pairs[ i ].begin(); j != Pairs[ i ].end(); ++j ) {
+				FunctionPair &p = j->second;
+				cout << "bug: " << IDtoFunc[ p.a ] << " in " << IDtoFunc[ i ] << ", pair: (" << IDtoFunc[ p.a ] << " " << IDtoFunc[ p.b ] << "), support: " << p.support << ", condfidence: " << p.confidence << ".00%" <<endl;
+			}
+		}
 	}
+	find_bugs();
 
 }
