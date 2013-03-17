@@ -29,28 +29,31 @@ void parser( ) {
 	
 	int ID = -1;
 	int i;
-	unsigned foundTop;
 	string func, TopLevelFunc = "";
-	
+
+	// This is to preset the iterator to the lines after the <<null function>> call
 	for( i = 1; i < callgraph_tokens.size(); i++ ) {
-		
 		if( callgraph_tokens[ i ] == "" ) {
-			// no more functions are left so we stop
+			i++;
 			break;
-		}
-		ID++;
-		func = getFuncFromToken( callgraph_tokens[ i ] );
-		FunctoID[ func ] = ID;
-		IDtoFunc[ ID ] = func;
-		
-	}// for
-	maxID = ID;
+		}//
+	}//
 	
 	for( ; i < callgraph_tokens.size(); i++ ) {
 		
-		if( callgraph_tokens[ i ] == "" ) {
+		if( callgraph_tokens[ i ] == "" ) {			
 			continue;
 		}
+
+		if( callgraph_tokens[ i ].find( "function:" ) != string::npos ||
+			callgraph_tokens[ i ].find( "function" ) != string::npos ) {					
+			func = getFuncFromToken( callgraph_tokens[ i ] );
+			if( FunctoID.find( func ) == FunctoID.end() ) {
+				ID++;
+				FunctoID[ func ] = ID;
+				IDtoFunc[ ID ] = func;
+			}//if
+		}//if
 		
 		if( callgraph_tokens[ i ].find( "function:" ) != string::npos ) {
 			TopLevelFunc = getFuncFromToken( callgraph_tokens[ i ] );
@@ -71,8 +74,9 @@ void parser( ) {
 				FuncCalls[ FunctoID[ TopLevelFunc ] ].push_back( FunctoID[ func ] );
             }// else
 		}//else
-	}//for
-	
+		
+	}// for
+	maxID = ID;	
 }// parser
 //*/
 
