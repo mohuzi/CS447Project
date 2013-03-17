@@ -107,17 +107,17 @@ void analyze() {
 
 	//Calculate confidence for each function pair, and throw out any pairs that don't meet the threasholds
 	//Loop through all function pairs
+	map< int, FunctionPair >::iterator temp;
     for ( int i = 0; i < Pairs.size(); i++ ){
-		for ( map< int, FunctionPair >::iterator j = Pairs[ i ].begin(); j != Pairs[ i ].end(); ++j ) {
+		for ( map< int, FunctionPair >::iterator j = Pairs[ i ].begin(); j != Pairs[ i ].end(); ) {
 			FunctionPair &p = j->second;
-			if( p.support < T_SUPPORT || ( ( p.support * 100 ) / support[ p.a ] ) < T_CONFIDENCE){
+			temp = j;
+			++j;
+			p.confidence = ( float(p.support) * 100.0f) / float(support[ p.a ]);
+			if( p.support < T_SUPPORT || p.confidence < float(T_CONFIDENCE)){				 
 				//Doesn't meet support or confidence threasholds
-				Pairs[ i ].erase( j );
+				Pairs[ i ].erase( temp);
 			} //if
-			else {
-				//Does meet thresholds, keep and record confidence
-				p.confidence = ( p.support * 10000 ) / support[ p.a ];
-			}//else
 		}//for
 	}//for
 }//  analyze
@@ -126,6 +126,7 @@ void find_bugs() {
 	bool found = false;
 	int a, b;
 	string pairname = "";
+	
 	//Look through all top-level functions
 	for( map< int, vector< int > >::iterator i = FuncCalls.begin(); i != FuncCalls.end(); ++i ) {
 		vector< int > &v = i->second;
@@ -148,9 +149,9 @@ void find_bugs() {
 						pairname = IDtoFunc[ p.a ] + " " + IDtoFunc[ p.b ];						
 					} else {
 						pairname = IDtoFunc[ p.b ] + " " + IDtoFunc[ p.a ];
-					}
+					}					
 					cout << "bug: " << IDtoFunc[ p.a ] << " in " << IDtoFunc[ i->first ] << " pair: (" << pairname << ") ";
-					cout << "support: " << p.support << ", confidence: " << p.confidence /100 << "." << setw(2) << setfill('0') << p.confidence % 100 << "%" <<endl;
+					cout << "support: " << p.support << " confidence: " << fixed << setprecision (2) << p.confidence   << "%" <<endl;					
 				}
 			}// for		
 		}// for

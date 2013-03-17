@@ -18,7 +18,7 @@ class FunctionPair{
     int a;
     int b;
     int support;
-    int confidence;
+    float confidence;
     
     FunctionPair(): a(0), b(0), support(0), confidence(-1) {}
 };
