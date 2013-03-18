@@ -1,0 +1,101 @@
+function map :
+0 => main
+1 => scope1
+2 => scope2
+3 => scope3
+4 => scope4
+5 => scope5
+6 => scope6
+7 => A
+8 => B
+9 => C
+10 => D
+11 => printf
+
+Call functions :
+0 calls: 1 2 3 4 5 6 
+1 calls: 7 8 9 10 
+2 calls: 7 9 10 
+3 calls: 7 8 
+4 calls: 8 10 1 
+5 calls: 8 10 7 
+6 calls: 8 10 
+7 calls: 11 
+8 calls: 11 
+9 calls: 11 
+10 calls: 11 
+Call graph node <<null function>><<0x109133b0>>  #uses=0
+  CS<0x0> calls function 'main'
+  CS<0x0> calls function 'scope1'
+  CS<0x0> calls function 'scope2'
+  CS<0x0> calls function 'scope3'
+  CS<0x0> calls function 'scope4'
+  CS<0x0> calls function 'scope5'
+  CS<0x0> calls function 'scope6'
+  CS<0x0> calls function 'A'
+  CS<0x0> calls function 'printf'
+  CS<0x0> calls function 'B'
+  CS<0x0> calls function 'C'
+  CS<0x0> calls function 'D'
+
+Call graph node for function: 'main'<<0x10914970>>  #uses=1
+  CS<0x10917368> calls function 'scope1'
+  CS<0x109177f8> calls function 'scope2'
+  CS<0x10917878> calls function 'scope3'
+  CS<0x109178f8> calls function 'scope4'
+  CS<0x10917978> calls function 'scope5'
+  CS<0x109179f8> calls function 'scope6'
+
+Call graph node for function: 'scope1'<<0x10913480>>  #uses=3
+  CS<0x10922a68> calls function 'A'
+  CS<0x10922ae8> calls function 'B'
+  CS<0x10922b68> calls function 'C'
+  CS<0x10922be8> calls function 'D'
+
+Call graph node for function: 'scope2'<<0x10913520>>  #uses=2
+  CS<0x10922d28> calls function 'A'
+  CS<0x10922da8> calls function 'C'
+  CS<0x10922e28> calls function 'D'
+
+Call graph node for function: 'scope3'<<0x109134b0>>  #uses=2
+  CS<0x10922f68> calls function 'A'
+  CS<0x10922fe8> calls function 'B'
+
+Call graph node for function: 'scope4'<<0x10926900>>  #uses=2
+  CS<0x10923128> calls function 'B'
+  CS<0x109231a8> calls function 'D'
+  CS<0x10923228> calls function 'scope1'
+
+Call graph node for function: 'scope5'<<0x10926970>>  #uses=2
+  CS<0x10923368> calls function 'B'
+  CS<0x109233e8> calls function 'D'
+  CS<0x10923468> calls function 'A'
+
+Call graph node for function: 'scope6'<<0x10913620>>  #uses=2
+  CS<0x109235a8> calls function 'B'
+  CS<0x10923628> calls function 'D'
+
+Call graph node for function: 'A'<<0x10914440>>  #uses=5
+  CS<0x10923920> calls function 'printf'
+
+Call graph node for function: 'printf'<<0x10926db0>>  #uses=5
+  CS<0x0> calls external node
+
+Call graph node for function: 'B'<<0x10926b60>>  #uses=6
+  CS<0x10923be0> calls function 'printf'
+
+Call graph node for function: 'C'<<0x10926af0>>  #uses=3
+  CS<0x10923ea0> calls function 'printf'
+
+Call graph node for function: 'D'<<0x10926cf0>>  #uses=6
+  CS<0x10924160> calls function 'printf'
+
+Learned Constraints :
+bug: A in A, pair: (A B), support: 3, condfidence: 75.00%
+bug: A in A, pair: (A D), support: 3, condfidence: 75.00%
+bug: B in B, pair: (B D), support: 4, condfidence: 80.00%
+bug: D in D, pair: (D B), support: 4, condfidence: 80.00%
+bug: A in scope2 pair: (A B) support: 3 confidence: 75.00%
+bug: D in scope2 pair: (B D) support: 4 confidence: 80.00%
+bug: A in scope3 pair: (A D) support: 3 confidence: 75.00%
+bug: B in scope3 pair: (B D) support: 4 confidence: 80.00%
