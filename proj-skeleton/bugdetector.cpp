@@ -4,7 +4,8 @@
 #include <iomanip>
 #include "bugdetector.h"
 
-const bool DEBUG = false;
+const bool DEBUG = true;
+const int IPC_LEVELS = 1; //default levels of inter-procedural analysis (1 turns it off completely)
 
 // GLOBAL DEFINITIONS
 unsigned int T_SUPPORT = 3; // default support
@@ -12,7 +13,8 @@ unsigned int T_CONFIDENCE = 65; // default confidence
 vector< string > callgraph_tokens;	// tokenize the callgraph
 map< int, string > IDtoFunc;
 map< string, int > FunctoID;
-map< int, vector<int> > FuncCalls;
+map< int, vector<int> > FuncCalls; // Modified for inter-procedural analysis
+map< int, vector<int> > OriginalFuncCalls; //The original function call data structure, corresponding to level 1 inter-procedural analysis
 int maxID;
 vector< map< int, FunctionPair > > Pairs;
 
@@ -80,6 +82,46 @@ void parser( ) {
 }// parser
 //*/
 
+void ipc_transform( ) {
+	/*
+	Transforms the internal function call structure for interprocedural analysis
+	Let FuncCalls-K be the graph where each node has an edge to all
+	nodea that could be reached in K steps or less in the original FuncCalls graph
+	Formally, replaces the graph in FuncCalls with FuncCalls-IPC_LEVELS
+	At each step, the algorithm starts with OldFuncCalls = FuncCalls-i, and finds
+	FuncCalls i+i by finding all verticies reachable in i+1 steps.
+	*/
+	int a,b;
+	map< int, vector<int> > NewFuncCalls = FuncCalls;
+	map< int, vector<int> > OldFuncCalls = FuncCalls;
+	OriginalFuncCalls = FuncCalls;
+	
+	//Repeatedly find 
+	for(int i = 1; i < IPC_LEVELS; i++) {
+		OldFuncCalls = NewFuncCalls;
+		//Loop through all verticies in the graph
+		for( map< int, vector< int > >::iterator i = FuncCalls.begin(); i != FuncCalls.end(); ++i ) {
+			a = i->first;
+			vector< int > &v = i->second;			
+			//Find all verticies reachable in i+1 steps, find all verticies reachable from this nodes immediate children
+			//in the original graph in i steps.
+			for( int j = 0; j < v.size(); j++ ) {
+				b = v[j];
+				if(DEBUG) {
+					cout << a << "," << b << endl;
+				}
+				//Merge verticies into the vector
+				NewFuncCalls[a].reserve( NewFuncCalls[a].size() + OldFuncCalls[b].size() );
+				NewFuncCalls[a].insert( NewFuncCalls[a].end(), OldFuncCalls[b].begin(), OldFuncCalls[b].end() );
+			}
+			//Sort and remove duplicates
+			sort( NewFuncCalls[a].begin(), NewFuncCalls[a].end() );
+			NewFuncCalls[a].erase( unique( NewFuncCalls[a].begin(), NewFuncCalls[a].end() ), NewFuncCalls[a].end() );
+		}		
+	}
+	FuncCalls = NewFuncCalls;
+}
+
 // Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
 void analyze() {
 	Pairs = vector< map< int, FunctionPair > > ( maxID + 1 );
@@ -123,12 +165,14 @@ void analyze() {
 }//  analyze
 
 void find_bugs() {
+	
 	bool found = false;
 	int a, b;
 	string pairname = "";
 	
-	//Look through all top-level functions
-	for( map< int, vector< int > >::iterator i = FuncCalls.begin(); i != FuncCalls.end(); ++i ) {
+	//Look through all top-level functions. OriginalFuncCalls is used because we only want to report each bug once,
+	// in the function in which it was originally used.
+	for( map< int, vector< int > >::iterator i = OriginalFuncCalls.begin(); i != OriginalFuncCalls.end(); ++i ) {
 		vector< int > &v = i->second;
 		for( int q = 0; q < v.size(); q++ ) {
 			a = v[ q ];
@@ -137,8 +181,8 @@ void find_bugs() {
 				found = false;
 				FunctionPair &p = j->second;
 				//See if we find a use of p.b				
-				for( int k = 0; k < v.size(); k++ ){
-					b = v[ k ];
+				for( int k = 0; k < FuncCalls[i->first].size(); k++ ){
+					b = FuncCalls[i->first][ k ];
 					if(p.b == b) {
 						found = true;
 					}
@@ -181,10 +225,17 @@ int main(int argc, char* argv[]) {
 		default:
 			cerr << "Your Command line paramaters are wrong!" << endl;
 	}; // switch   
+
+	if(DEBUG) {
+		//To see the original Bitcode
+		cout << "original bitcode :" << endl;
+		for( int i =0; i < callgraph_tokens.size(); i++ )
+		{		
+			cout << callgraph_tokens[ i ] << endl;
+		}
+	}	
 	
-	parser( );
- 	
-	
+	parser( );	
 	if(DEBUG) {
 		// To see what we have in those data structure. 
 		cout << "function map :" << endl;
@@ -201,12 +252,19 @@ int main(int argc, char* argv[]) {
 		}  	
 	}
 	
-	if(DEBUG) {
-		//To see the original Bitcode
-		for( int i =0; i < callgraph_tokens.size(); i++ )
-		{		
-			cout << callgraph_tokens[ i ] << endl;
-		}
+	ipc_transform( );
+
+		if(DEBUG) {
+		// To see what we have in those data structure. 
+
+		cout << endl<<"Call functions :" << endl;
+		for ( map< int, vector < int > >::iterator  it = FuncCalls.begin(); it != FuncCalls.end(); ++it ){
+			cout << it->first << " calls: ";
+			for ( int it2 = 0; it2 < it->second.size(); it2++ ){
+				cout << it->second[ it2 ] <<" ";
+			}
+			cout << endl;
+		}  	
 	}
 	
 	analyze();  	
@@ -216,7 +274,8 @@ int main(int argc, char* argv[]) {
 		for( int i = 0; i < Pairs.size(); i++ ){
 			for( map< int, FunctionPair >::iterator j = Pairs[ i ].begin(); j != Pairs[ i ].end(); ++j ) {
 				FunctionPair &p = j->second;
-				cout << "bug: " << IDtoFunc[ p.a ] << " in " << IDtoFunc[ i ] << ", pair: (" << IDtoFunc[ p.a ] << " " << IDtoFunc[ p.b ] << "), support: " << p.support << ", condfidence: " << p.confidence << ".00%" <<endl;
+				cout << "pair: (" << IDtoFunc[ p.a ] << " " << IDtoFunc[ p.b ] << "), support: " 
+					 << p.support << ", confidence: " << fixed << setprecision (2) << p.confidence << "%" <<endl;
 			}
 		}
 	}
