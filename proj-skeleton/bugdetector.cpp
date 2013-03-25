@@ -4,8 +4,9 @@
 #include <iomanip>
 #include "bugdetector.h"
 
-const bool DEBUG = true;
-const int IPC_LEVELS = 1; //default levels of inter-procedural analysis (1 turns it off completely)
+#define DEBUG true
+
+#define IPC_LEVELS 1 //default levels of inter-procedural analysis (1 turns it off completely)
 
 // GLOBAL DEFINITIONS
 unsigned int T_SUPPORT = 3; // default support
@@ -41,6 +42,8 @@ void parser( ) {
 		}//
 	}//
 	
+	// Iterate through the callgraph tokens and retrive all the functions that are being called
+	// once retrived assign them a unique ID to avoid doing string comparison
 	for( ; i < callgraph_tokens.size(); i++ ) {
 		
 		if( callgraph_tokens[ i ] == "" ) {			
@@ -48,7 +51,8 @@ void parser( ) {
 		}
 
 		if( callgraph_tokens[ i ].find( "function:" ) != string::npos ||
-			callgraph_tokens[ i ].find( "function" ) != string::npos ) {					
+			callgraph_tokens[ i ].find( "function" ) != string::npos ) {	
+
 			func = getFuncFromToken( callgraph_tokens[ i ] );
 			if( FunctoID.find( func ) == FunctoID.end() ) {
 				ID++;
@@ -107,9 +111,9 @@ void ipc_transform( ) {
 			//in the original graph in i steps.
 			for( int j = 0; j < v.size(); j++ ) {
 				b = v[j];
-				if(DEBUG) {
+#if DEBUG
 					cout << a << "," << b << endl;
-				}
+#endif
 				//Merge verticies into the vector
 				NewFuncCalls[a].reserve( NewFuncCalls[a].size() + OldFuncCalls[b].size() );
 				NewFuncCalls[a].insert( NewFuncCalls[a].end(), OldFuncCalls[b].begin(), OldFuncCalls[b].end() );
@@ -122,7 +126,8 @@ void ipc_transform( ) {
 	FuncCalls = NewFuncCalls;
 }
 
-// Using the parse data, calculate the support for functions and function pairs, and then return the function pairs which we have inferred must always occur together
+// Using the parse data, calculate the support for functions and function pairs, 
+// and then return the function pairs which we have inferred must always occur together
 void analyze() {
 	Pairs = vector< map< int, FunctionPair > > ( maxID + 1 );
 	vector< int > support = vector< int >( maxID, 0 );
@@ -147,7 +152,7 @@ void analyze() {
 		}// for
 	}// for
 
-	//Calculate confidence for each function pair, and throw out any pairs that don't meet the threasholds
+	//Calculate confidence for each function pair, and throw out any pairs that don't meet the thresholds
 	//Loop through all function pairs
 	map< int, FunctionPair >::iterator temp;
     for ( int i = 0; i < Pairs.size(); i++ ){
@@ -181,15 +186,16 @@ void find_bugs() {
 				found = false;
 				FunctionPair &p = j->second;
 				//See if we find a use of p.b				
-				for( int k = 0; k < FuncCalls[i->first].size(); k++ ){
-					b = FuncCalls[i->first][ k ];
-					if(p.b == b) {
+				for( int k = 0; k < FuncCalls[ i->first ].size(); k++ ){
+					b = FuncCalls[ i->first ][ k ];
+					if( p.b == b ) {
 						found = true;
+						break;
 					}
 				}// for
 				if(!found) {
 					//Admiral Ackbar says: "It's a bug!
-					if(IDtoFunc[ p.a ] < IDtoFunc[ p.b ]) {
+					if( IDtoFunc[ p.a ] < IDtoFunc[ p.b ] ) {
 						pairname = IDtoFunc[ p.a ] + " " + IDtoFunc[ p.b ];						
 					} else {
 						pairname = IDtoFunc[ p.b ] + " " + IDtoFunc[ p.a ];
@@ -218,25 +224,25 @@ int main(int argc, char* argv[]) {
 			// FALL THROUGH
 		case 1:
 			while( getline(cin , token ) ) {
-				callgraph_tokens.push_back( token );
-				//tokens.push_back( token );
+				callgraph_tokens.push_back( token );				
 			}// while
 			break;
 		default:
 			cerr << "Your Command line paramaters are wrong!" << endl;
 	}; // switch   
 
-	if(DEBUG) {
+#if DEBUG
 		//To see the original Bitcode
 		cout << "original bitcode :" << endl;
 		for( int i =0; i < callgraph_tokens.size(); i++ )
 		{		
 			cout << callgraph_tokens[ i ] << endl;
 		}
-	}	
+#endif
 	
-	parser( );	
-	if(DEBUG) {
+	parser( );
+
+#if DEBUG
 		// To see what we have in those data structure. 
 		cout << "function map :" << endl;
 		for ( map< int, string >::iterator  it = IDtoFunc.begin(); it != IDtoFunc.end(); ++it )
@@ -250,14 +256,14 @@ int main(int argc, char* argv[]) {
 			}
 			cout << endl;
 		}  	
-	}
+#endif
 	
 	ipc_transform( );
 
-		if(DEBUG) {
+#if DEBUG
 		// To see what we have in those data structure. 
 
-		cout << endl<<"Call functions :" << endl;
+		cout << endl<<"IPC Call functions :" << endl;
 		for ( map< int, vector < int > >::iterator  it = FuncCalls.begin(); it != FuncCalls.end(); ++it ){
 			cout << it->first << " calls: ";
 			for ( int it2 = 0; it2 < it->second.size(); it2++ ){
@@ -265,10 +271,11 @@ int main(int argc, char* argv[]) {
 			}
 			cout << endl;
 		}  	
-	}
+#endif
 	
-	analyze();  	
-	if(DEBUG) {
+	analyze(); 
+
+#if DEBUG
 		cout << "Learned Constraints :" << flush << endl;	
 		//Loop through all function pairs
 		for( int i = 0; i < Pairs.size(); i++ ){
@@ -278,7 +285,8 @@ int main(int argc, char* argv[]) {
 					 << p.support << ", confidence: " << fixed << setprecision (2) << p.confidence << "%" <<endl;
 			}
 		}
-	}
+#endif
+
 	find_bugs();
 
-}
+}// main
